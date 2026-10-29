@@ -202,8 +202,19 @@ plugins:
   tavern:
     secret: "shared_hmac_secret"
     model: "probe"
-    decisionTimeoutMs: 10000
+    decisionTimeoutMs: 40000
+    basePath: "/tavern"          # deployment prefix included in the signed path
     tableName: "LuckyBot"
+    invitation:
+      decide: "ask"              # "always" or "ask"
+      timeoutMs: 8000            # capped at 14000 (host `ask` limit; dealer waits 30 s)
+      onTimeout: "accept"
+    games:
+      liars_bar:
+        enabled: true
+        modes: ["classic", "devil", "chaos"]   # optional allowlist; omit for all
+      bullet_poker:
+        enabled: true
 
 chats:
   default:
@@ -219,6 +230,26 @@ chats:
 - **Default-off**: Plugins are disabled globally and per chat by default.
 - **Secrets redaction**: Plugin secrets in `config.yaml` are registered with `registerHttpSecret` so they are automatically redacted from error logs.
 - **No secrets in repository**: Plugins must never hardcode credentials or commit sample secrets.
+
+### Tavern plugin configuration
+
+The tavern plugin serves the third-party dealer protocol (see `plugins/src/tavern/openapi.json`). Enable it per chat with `chats.<id>.plugins.tavern.enabled: true`; the top-level `plugins.tavern` block is the deployment configuration.
+
+| Key | Default | Meaning |
+|---|---|---|
+| `secret` | required | Shared HMAC secret (not a Feishu secret). Requests are signed over `{timestamp}.{METHOD}.{path}.{raw body bytes}`; the path includes `basePath` and excludes the query string. |
+| `model` | `"probe"` | Model used for game decisions and event table talk. |
+| `askModel` | chat probe model | Model used by the invitation `ask` capability. |
+| `decisionTimeoutMs` | `40000` | Our share of a decision deadline, capped at `58000`. The applied budget is `min(decisionTimeoutMs, deadline_ms - 3000)` with a floor of 1000 ms. |
+| `invitation.decide` | `"always"` | `"always"` accepts every supported invitation; `"ask"` asks the bot in character. |
+| `invitation.timeoutMs` | `8000` | Invitation decision timeout, capped at `14000` to match the host `ask` capability (the dealer itself waits 30 s). |
+| `invitation.onTimeout` | `"accept"` | Fallback when `ask` fails or times out. |
+| `basePath` | `""` | Path prefix (e.g. `/tavern`) mounted on the unified HTTP server and included in the signature. |
+| `tableName` | `"LuckyBot"` | Display name used in table messages. |
+| `games.<id>.enabled` | `true` | Per-game switch; `false` makes invitations return `accept: false` and rounds/decisions/events return 404. |
+| `games.<id>.modes` | all modes | Optional allowlist (Liar's Bar: `classic` / `devil` / `chaos`); an invitation for another mode is declined. |
+
+Games currently registered: `liars_bar` (骗子酒馆) and `bullet_poker` (子弹德州). Decisions prefer the dealer's generic `ask` / `prompt` / `rules` / `choices` fields and reply `{ "turn_id": …, "choice": "…" }`; the legacy per-game action path is used only when `choices` is absent. Duplicate deliveries are acknowledged with `200 {}` (duplicate decisions return the cached reply), and `seq` is not treated as a monotonic cursor because it restarts when the dealer restarts.
 
 ---
 
