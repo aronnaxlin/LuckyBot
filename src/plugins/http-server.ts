@@ -165,6 +165,18 @@ export const createPluginHttpServer = (logger: Logger): PluginHttpServer => {
   const start = async (host: string, port: number): Promise<void> => {
     if (running) return;
     server = createServer((req, res) => {
+      // One line per request: plugins answer rejected calls (bad signature,
+      // unknown route) without logging, and a missed tavern invitation on
+      // 10-29 could not be traced without it.
+      const startedAt = Date.now();
+      res.on('finish', () => {
+        logger.withFields({
+          method: req.method,
+          path: (req.url ?? '/').split('?')[0],
+          status: res.statusCode,
+          ms: Date.now() - startedAt,
+        }).log('Plugin HTTP request');
+      });
       void handleRequest(req, res).catch(err => {
         logger.withError(err).error('Unexpected server error');
         if (!res.headersSent) {
