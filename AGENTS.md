@@ -17,7 +17,7 @@ The sections below describe the **current inherited implementation**, not immuta
 
 ## Delegation And Monitoring
 
-For every background Paseo delegation, use an isolated worktree and explicit file ownership. Enable completion notifications where supported, and create a bounded parent monitor at dispatch time (default every 5 minutes, with `maxFires`). Collect completed/error/permission-blocked reports and arrange review without waiting for the user. Remove the monitor when all work is collected or blocked on user action; do not automatically restart quota-blocked agents. Credentials, live services, commits, and pushes require their respective authorization.
+For every background Paseo delegation, use an isolated worktree and explicit file ownership. Enable completion notifications. Collect completed/error/permission-blocked reports and arrange review without waiting for the user; do not automatically restart quota-blocked agents. Credentials, live services, commits, and pushes require their respective authorization.
 
 ## System Overview
 
