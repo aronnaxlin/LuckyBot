@@ -101,6 +101,16 @@ describe.each([
   });
 });
 
+// 10-29: a one-sided "罚酒挂到明早" was summarized as a mutual bet, and the
+// bot dunned people for it the next morning.
+describe('compaction commitments', () => {
+  it('records a commitment as mutual only with the other side\'s acceptance', async () => {
+    const prompt = await renderTemplate('compaction-system.velin.md');
+    expect(prompt).toContain('only when the other side\'s own message accepts it');
+    expect(prompt).toContain('(one-sided, not accepted)');
+  });
+});
+
 // Participation tuning (phase 1). These assert on the wording this change
 // introduced: the probe gate judges whether the bot SHOULD act, restraint and
 // addressee rules are first-class, and the new participation signals render
@@ -122,7 +132,9 @@ describe('participation tuning wording', () => {
     expect(probe).toContain('one message from the chatbot per four to six human messages');
     expect(probe).toContain('return "react_only"');
     expect(probe).toContain("the chatbot's turn in a game it is playing");
-    expect(probe).toContain('states something wrong about what the chatbot said or did');
+    expect(probe).toContain('states a factual error about what the chatbot said or did');
+    expect(probe).toContain('It is never a reason to act by itself');
+    expect(probe).toContain('already run two rounds with nothing new on either side');
     expect(probe).toContain('clearly invites a reaction');
   });
 
@@ -162,9 +174,10 @@ describe('participation tuning wording', () => {
     expect(probe).toContain('that target does not apply to it');
   });
 
-  it('keeps corrections in chat and persona only, with backend secrecy winning', async () => {
+  it('keeps corrections to facts about the chatbot, with backend secrecy winning', async () => {
     const probe = await renderTemplate('system.velin.md', { mode: 'probe', ...SYSTEM_PROPS });
-    expect(probe).toContain('Corrections cover only what the chatbot said or did in this chat, and its persona.');
+    expect(probe).toContain('Corrections cover only factual claims about what the chatbot said or did in this chat.');
+    expect(probe).toContain('Opinions about its personality or temper');
     expect(probe).toContain('never correct them with real details');
   });
 
